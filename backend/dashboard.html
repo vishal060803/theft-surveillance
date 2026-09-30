@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Security Operations Dashboard</title>
+    <style>
+        :root {
+            --bg: #071827;
+            --panel: #0f1f2f;
+            --panel-alt: #12263b;
+            --line: rgba(148, 163, 184, 0.18);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --cyan: #38bdf8;
+            --green: #4ade80;
+            --amber: #fbbf24;
+            --red: #f87171;
+            --purple: #a78bfa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(180deg, var(--bg), #0b1623 60%, #0d1420);
+            color: var(--text);
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            border-bottom: 1px solid var(--line);
+            background: rgba(8, 15, 27, 0.8);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+        }
+        .status-pill {
+            background: rgba(74, 222, 128, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(74, 222, 128, 0.35);
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+        }
+        .container {
+            padding: 24px 28px 40px;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .metric-card {
+            background: rgba(15, 31, 47, 0.95);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow: 0 12px 24px rgba(2, 6, 23, 0.2);
+        }
+        .metric-label {
+            color: var(--muted);
+            font-size: 0.8rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .metric-value {
+            font-size: 2rem;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .panel {
+            background: rgba(15, 31, 47, 0.95);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 16px 24px rgba(2, 6, 23, 0.2);
+        }
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+        .zone-map {
+            position: relative;
+            width: 100%;
+            height: 440px;
+            background: linear-gradient(135deg, #0d1b2a, #102a3d);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+        }
+        .map-box {
+            width: 100%;
+            height: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .filter {
+            background: rgba(10, 18, 31, 0.9);
+            color: var(--text);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px 10px;
+            min-width: 160px;
+        }
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        button, .btn {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn.secondary {
+            background: rgba(59, 130, 246, 0.14);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+        }
+        .alert-list, .timeline {
+            display: grid;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .alert-item, .event-item {
+            background: rgba(9, 16, 24, 0.8);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+        .alert-item strong, .event-item strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+        .critical { background: rgba(248, 113, 113, 0.12); color: var(--red); }
+        .high { background: rgba(251, 191, 36, 0.12); color: var(--amber); }
+        .medium { background: rgba(56, 189, 248, 0.12); color: var(--cyan); }
+        .low { background: rgba(74, 222, 128, 0.12); color: var(--green); }
+        .evidence-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .evidence-card {
+            background: rgba(9, 16, 24, 0.8);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .evidence-card video {
+            width: 100%;
+            border-radius: 8px;
+            max-height: 180px;
+            background: #0f172a;
+        }
+        .health-grid {
+            display: grid;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .health-row {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(9, 16, 24, 0.65);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .muted {
+            color: var(--muted);
+        }
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="brand">Security Operations Center</div>
+        <div class="status-pill">System Online</div>
+    </div>
+
+    <div class="container">
+        <div class="metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total Alerts</div>
+                <div class="metric-value" id="totalAlerts">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">High Risk</div>
+                <div class="metric-value" id="highRiskAlerts">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Evidence Files</div>
+                <div class="metric-value" id="evidenceTotal">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active Zones</div>
+                <div class="metric-value" id="zonesActive">0</div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <select id="dateFilter" class="filter">
+                <option value="all">All Time</option>
+                <option value="today">Today</option>
+                <option value="7d">Last 7 Days</option>
+                <option value="30d">Last 30 Days</option>
+            </select>
+            <select id="zoneFilter" class="filter">
+                <option value="all">All Zones</option>
+                <option value="entrance">Entrance</option>
+                <option value="cashier">Cashier</option>
+                <option value="storage">Storage</option>
+                <option value="restricted">Restricted</option>
+                <option value="exit">Exit</option>
+            </select>
+            <select id="eventFilter" class="filter">
+                <option value="all">All Events</option>
+                <option value="WEAPON_DETECTED">Weapon Detected</option>
+                <option value="SUSPICIOUS_PERSON">Suspicious Person</option>
+                <option value="EMERGENCY_SIGNAL">Emergency Signal</option>
+            </select>
+            <button id="refreshBtn">Refresh</button>
+        </div>
+
+        <div class="button-row">
+            <a class="btn" href="/evidence/export">Export CSV</a>
+            <button class="btn secondary" id="acknowledgeBtn">Acknowledge Latest Alert</button>
+        </div>
+
+        <div class="layout">
+            <div class="panel">
+                <h2>Hotspot & Zone Activity</h2>
+                <div id="zoneMap" class="zone-map"></div>
+            </div>
+            <div class="panel">
+                <h2>Location Overview</h2>
+                <div id="map" class="map-box"></div>
+            </div>
+        </div>
+
+        <div class="layout">
+            <div class="panel">
+                <h2>Alerts Log</h2>
+                <div id="alertsLog" class="alert-list"></div>
+            </div>
+            <div class="panel">
+                <h2>System Health</h2>
+                <div id="systemHealth" class="health-grid"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Recent Detections</h2>
+            <div id="events" class="timeline"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Evidence Gallery</h2>
+            <div id="evidenceGallery" class="evidence-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        const displayedVideos = new Set();
+        const zoneFilter = document.getElementById('zoneFilter');
+        const eventFilter = document.getElementById('eventFilter');
+
+        function filterAlerts(alerts) {
+            const zoneValue = zoneFilter.value;
+            const eventValue = eventFilter.value;
+            return alerts.filter(alert => {
+                const matchesZone = zoneValue === 'all' || (alert.zone_name || '').toLowerCase() === zoneValue;
+                const matchesEvent = eventValue === 'all' || (alert.event_type || '').toUpperCase() === eventValue;
+                return matchesZone && matchesEvent;
+            });
+        }
+
+        function renderMetrics(summary) {
+            document.getElementById('totalAlerts').textContent = summary.alerts_total || 0;
+            document.getElementById('highRiskAlerts').textContent = summary.alerts_high_risk || 0;
+            document.getElementById('evidenceTotal').textContent = summary.evidence_total || 0;
+            document.getElementById('zonesActive').textContent = summary.zones_active || 0;
+        }
+
+        function renderAlerts(alerts) {
+            const container = document.getElementById('alertsLog');
+            container.innerHTML = '';
+            const filtered = filterAlerts(alerts);
+            if (!filtered.length) {
+                container.innerHTML = '<div class="alert-item"><strong>No alerts match the current filters.</strong></div>';
+                return;
+            }
+            filtered.slice(0, 8).forEach(alert => {
+                const item = document.createElement('div');
+                item.className = 'alert-item';
+                const priority = (alert.priority || 'low').toLowerCase();
+                item.innerHTML = `
+                    <strong>${alert.event_type || 'Security Alert'}</strong>
+                    <div class="muted">${alert.zone_name || 'overall'} • ${alert.ts || 'n/a'}</div>
+                    <div>${alert.message || 'Alert received'}</div>
+                    <span class="badge ${priority}">${priority.toUpperCase()}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function renderEvidence(records) {
+            const gallery = document.getElementById('evidenceGallery');
+            gallery.innerHTML = '';
+            const items = Array.isArray(records) ? records : (records.evidence || []);
+            items.slice(0, 6).forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'evidence-card';
+                card.innerHTML = `
+                    <video controls src="/media/${item.clip_path || ''}"></video>
+                    <div style="margin-top:10px; font-weight:bold;">${item.event_type || 'Event'}</div>
+                    <div class="muted">Zone: ${item.zone || 'unknown'}</div>
+                    <div class="muted">Risk: ${item.risk_score || 0}</div>
+                    <div class="muted">Time: ${item.timestamp || 'n/a'}</div>
+                `;
+                gallery.appendChild(card);
+            });
+        }
+
+        async function loadSummary() {
+            try {
+                const res = await fetch('/dashboard/summary');
+                const data = await res.json();
+                renderMetrics(data);
+                if (data.hotspots && data.hotspots.length) {
+                    renderZoneMap(data.hotspots);
+                }
+            } catch (err) {
+                console.error('Summary error:', err);
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const res = await fetch('/alerts');
+                const data = await res.json();
+                renderAlerts(data.alerts || []);
+            } catch (err) {
+                console.error('Alerts error:', err);
+            }
+        }
+
+        async function loadEvidence() {
+            try {
+                const res = await fetch('/evidence');
+                const data = await res.json();
+                renderEvidence(data.evidence || []);
+            } catch (err) {
+                console.error('Evidence error:', err);
+            }
+        }
+
+        async function loadHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                const health = document.getElementById('systemHealth');
+                health.innerHTML = `
+                    <div class="health-row"><span>System Status</span><strong>${data.status || 'ok'}</strong></div>
+                    <div class="health-row"><span>Monitoring Mode</span><strong>${data.monitoring_mode || 'active'}</strong></div>
+                    <div class="health-row"><span>Evidence</span><strong>${data.evidence_count || 0}</strong></div>
+                    <div class="health-row"><span>Alerts</span><strong>${data.alerts_count || 0}</strong></div>
+                    <div class="health-row"><span>Timestamp</span><strong>${data.timestamp || 'n/a'}</strong></div>
+                `;
+            } catch (err) {
+                console.error('Health error:', err);
+            }
+        }
+
+        async function loadEvents() {
+            try {
+                const res = await fetch('/events');
+                const files = await res.json();
+                const timeline = document.getElementById('events');
+                timeline.innerHTML = '';
+                const clips = (files || []).filter(f => f.endsWith('.mp4')).slice(0, 6);
+                clips.forEach(file => {
+                    if (!displayedVideos.has(file)) {
+                        displayedVideos.add(file);
+                    }
+                    const item = document.createElement('div');
+                    item.className = 'event-item';
+                    item.innerHTML = `
+                        <strong>${file.replace(/_/g, ' ')}</strong>
+                        <div class="muted">Recent detection clip</div>
+                        <video controls style="width:100%; margin-top:8px; max-height:220px;" src="/media/${file}"></video>
+                    `;
+                    timeline.appendChild(item);
+                });
+            } catch (err) {
+                console.error('Events error:', err);
+            }
+        }
+
+        function renderZoneMap(zones) {
+            const zoneMap = document.getElementById('zoneMap');
+            zoneMap.innerHTML = '';
+            const layout = zones.map(zone => ({
+                name: zone.name || zone.zone_name || 'zone',
+                x: Number(zone.x || 0),
+                y: Number(zone.y || 0),
+                w: Number(zone.w || 0.25),
+                h: Number(zone.h || 0.25),
+                hotspot_score: Number(zone.hotspot_score || zone.score || 0),
+            }));
+            layout.forEach(zone => {
+                const box = document.createElement('div');
+                const score = Math.max(0, Math.min(100, zone.hotspot_score || 0));
+                const alpha = 0.15 + (score / 100) * 0.7;
+                box.style.position = 'absolute';
+                box.style.left = `${(zone.x || 0) * 100}%`;
+                box.style.top = `${(zone.y || 0) * 100}%`;
+                box.style.width = `${(zone.w || 0.25) * 100}%`;
+                box.style.height = `${(zone.h || 0.25) * 100}%`;
+                box.style.border = '2px solid rgba(255,255,255,0.8)';
+                box.style.borderRadius = '12px';
+                box.style.background = `rgba(255, ${Math.max(0, 255 - score * 2)}, 0, ${alpha})`;
+                box.style.padding = '8px';
+                box.style.color = '#fff';
+                box.style.fontWeight = 'bold';
+                box.style.display = 'flex';
+                box.style.alignItems = 'flex-end';
+                box.style.justifyContent = 'space-between';
+                box.innerHTML = `<span>${zone.name}</span><span>${score}</span>`;
+                zoneMap.appendChild(box);
+            });
+        }
+
+        async function loadLocation() {
+            const mapContainer = document.getElementById('map');
+            mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;">Map unavailable. Add a valid Google Maps key in THREAT_SURVEILLANCE_GOOGLE_MAPS_KEY to enable the location view.</div>';
+
+            try {
+                const res = await fetch('/location');
+                const data = await res.json();
+                const lat = Number(data.lat || 12.9716);
+                const lon = Number(data.lon || 77.5946);
+                const key = '__GOOGLE_MAPS_KEY__';
+
+                if (!key) {
+                    return;
+                }
+
+                if (!window.google || !window.google.maps) {
+                    const script = document.createElement('script');
+                    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`;
+                    script.async = true;
+                    script.defer = true;
+                    script.onload = () => {
+                        const map = new google.maps.Map(mapContainer, {
+                            zoom: 16,
+                            center: { lat, lng: lon },
+                        });
+                        new google.maps.Marker({
+                            position: { lat, lng: lon },
+                            map,
+                            title: 'Monitored location',
+                        });
+                    };
+                    script.onerror = () => {
+                        mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fbbf24;">Google Maps failed to load. Check the configuration key.</div>';
+                    };
+                    document.head.appendChild(script);
+                    return;
+                }
+
+                const map = new google.maps.Map(mapContainer, {
+                    zoom: 16,
+                    center: { lat, lng: lon },
+                });
+                new google.maps.Marker({
+                    position: { lat, lng: lon },
+                    map,
+                    title: 'Monitored location',
+                });
+            } catch (err) {
+                console.error('Location map error:', err);
+                mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#fbbf24;">Map unavailable right now. Please check the location service.</div>';
+            }
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', async () => {
+            await Promise.all([loadSummary(), loadAlerts(), loadEvidence(), loadHealth(), loadEvents()]);
+        });
+
+        zoneFilter.addEventListener('change', loadAlerts);
+        eventFilter.addEventListener('change', loadAlerts);
+
+        async function initDashboard() {
+            await Promise.all([loadSummary(), loadAlerts(), loadEvidence(), loadHealth(), loadEvents(), loadLocation()]);
+            setInterval(async () => {
+                await Promise.all([loadSummary(), loadAlerts(), loadEvidence(), loadHealth(), loadEvents()]);
+            }, 8000);
+        }
+
+        document.getElementById('acknowledgeBtn').addEventListener('click', async () => {
+            try {
+                const res = await fetch('/alerts');
+                const data = await res.json();
+                const alerts = data.alerts || [];
+                if (!alerts.length) {
+                    alert('No alerts available to acknowledge.');
+                    return;
+                }
+                const latest = alerts[0];
+                await fetch(`/alerts/${latest.id}/ack`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ responder: 'operator' })
+                });
+                await loadAlerts();
+            } catch (err) {
+                console.error('Acknowledge error:', err);
+            }
+        });
+
+        initDashboard();
+    </script>
+
+    <script>
+        window.GOOGLE_MAPS_KEY = '__GOOGLE_MAPS_KEY__';
+    </script>
+</body>
+</html>

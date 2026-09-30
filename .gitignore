@@ -1,0 +1,23 @@
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+env_realtime/
+__pycache__/
+*.py[cod]
+
+# Runtime database, evidence, and backup output
+backend/runs/*.db
+backend/runs/*.db-*
+backend/runs/evidence/*
+!backend/runs/evidence/.gitkeep
+backend/runs/backups/*
+backend/runs/location.json
+
+# Local logs and editor/OS metadata
+logs/
+.vscode/
+.DS_Store
+Thumbs.db
