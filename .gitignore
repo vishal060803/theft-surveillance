@@ -7,6 +7,7 @@ env/
 env_realtime/
 __pycache__/
 *.py[cod]
+*.zip
 
 # Runtime data, generated alert images, and local datasets
 backend/runs/
