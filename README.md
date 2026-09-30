@@ -35,7 +35,7 @@ backend/weights/               Model weight files
 backend/runs/                  Local database, location, and evidence data
 requirements.txt               Python dependencies
 plan.md                        Development roadmap
- tests/                         Automated phase tests
+tests/                         Automated phase tests
 Dockerfile                      Container image definition
 docker-compose.yml              Container orchestration example
 ```
